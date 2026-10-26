@@ -2,7 +2,19 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { api } from '../utils/api';
-import { money, fdate } from '../utils/format';
+import { money } from '../utils/format';
+import {
+  Heart,
+  ShoppingCart,
+  Calculator,
+  Wallet,
+  Gift,
+  Banknote,
+  FileText,
+  AlertTriangle,
+  CheckCircle2,
+  ShoppingBag,
+} from '../utils/icons';
 
 function dayLabel(iso) {
   return new Date(iso + 'T12:00:00').toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric' });
@@ -33,7 +45,12 @@ export default function Dashboard() {
       .catch(fail);
   }, [fail]);
 
-  if (!d) return <div className="empty"><div className="big">💗</div><p>Cargando…</p></div>;
+  if (!d) return (
+    <div className="empty">
+      <div className="big"><Heart size={42} strokeWidth={1.5} style={{ color: 'var(--rose-400)' }} /></div>
+      <p>Cargando…</p>
+    </div>
+  );
 
   const hr = new Date().getHours();
   const greet = hr < 12 ? 'Buenos días' : hr < 19 ? 'Buenas tardes' : 'Buenas noches';
@@ -43,42 +60,51 @@ export default function Dashboard() {
     <>
       <div className="hello mb">
         <div>
-          <h1>{greet}, {user?.full_name?.split(' ')[0]} 💕</h1>
+          <h1>
+            {greet}, {user?.full_name?.split(' ')[0]}{' '}
+            <Heart size={22} fill="var(--rose-400)" stroke="var(--rose-400)" style={{ display: 'inline', verticalAlign: 'middle' }} />
+          </h1>
           <p className="muted" style={{ margin: '6px 0 0' }}>
             {new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })} ·{' '}
             {c ? 'La caja está abierta, ¡a vender!' : 'Aún no has abierto la caja de hoy.'}
           </p>
         </div>
         <div className="gap">
-          <Link className="btn primary big" to="/pos">🛒 Nueva venta</Link>
+          <Link className="btn primary big" to="/pos">
+            <ShoppingCart size={18} strokeWidth={2} style={{ marginRight: 6 }} /> Nueva venta
+          </Link>
           {c ? (
-            <Link className="btn ghost big" to="/close">🧮 Cerrar caja</Link>
+            <Link className="btn ghost big" to="/close">
+              <Calculator size={18} strokeWidth={2} style={{ marginRight: 6 }} /> Cerrar caja
+            </Link>
           ) : (
-            <Link className="btn ghost big" to="/cash">💰 Abrir caja</Link>
+            <Link className="btn ghost big" to="/cash">
+              <Wallet size={18} strokeWidth={2} style={{ marginRight: 6 }} /> Abrir caja
+            </Link>
           )}
         </div>
       </div>
       <div className="grid g4 mb">
         <div className="card stat hot">
-          <span className="em">💸</span>
+          <span className="em"><Gift size={28} strokeWidth={1.75} /></span>
           <div className="lbl">Ventas de hoy</div>
           <div className="val">{money(d.today_total)}</div>
           <div className="sub">{d.today_count} venta{d.today_count === 1 ? '' : 's'}</div>
         </div>
         <div className="card stat">
-          <span className="em">💵</span>
+          <span className="em"><Banknote size={28} strokeWidth={1.75} /></span>
           <div className="lbl">Efectivo esperado</div>
           <div className="val">{c ? money(c.efectivo_esperado) : '—'}</div>
           <div className="sub">{c ? `Base ${money(c.base)} + ventas − salidas` : 'Caja cerrada'}</div>
         </div>
         <div className="card stat">
-          <span className="em">🧾</span>
+          <span className="em"><FileText size={28} strokeWidth={1.75} /></span>
           <div className="lbl">Salidas de hoy</div>
           <div className="val">{c ? money(c.gastos) : '—'}</div>
           <div className="sub">Cadenas, ahorros y gastos</div>
         </div>
         <div className="card stat">
-          <span className="em">⚠️</span>
+          <span className="em"><AlertTriangle size={28} strokeWidth={1.75} /></span>
           <div className="lbl">Por agotarse</div>
           <div className="val" style={{ color: d.low_count ? 'var(--danger)' : 'var(--ok)' }}>{d.low_count}</div>
           <div className="sub">productos en stock mínimo</div>
@@ -91,13 +117,17 @@ export default function Dashboard() {
         </div>
         <div className="card">
           <div className="spread">
-            <h3>🚨 Por surtir</h3>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <AlertTriangle size={18} strokeWidth={2} style={{ color: 'var(--danger)' }} /> Por surtir
+            </h3>
             <Link className="btn sm" to="/inventory">Ver pedido</Link>
           </div>
           {d.low?.length ? (
             d.low.map(p => (
               <div className="gap" key={p.id} style={{ padding: '8px 0', borderBottom: '1px dashed var(--rose-200)' }}>
-                <div className="thumb">{p.image ? <img src={p.image} alt="" /> : (p.emoji || '🛍️')}</div>
+                <div className="thumb">
+                  {p.image ? <img src={p.image} alt="" /> : <ShoppingBag size={20} strokeWidth={1.5} style={{ color: 'var(--plum-soft)' }} />}
+                </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <b style={{ fontSize: 14 }}>{p.name}</b>
                   <div className="small muted">{p.sku} · mín. {p.min_stock}</div>
@@ -106,7 +136,10 @@ export default function Dashboard() {
               </div>
             ))
           ) : (
-            <div className="empty"><div className="big">🎉</div><p>Todo el inventario está bien surtido</p></div>
+            <div className="empty">
+              <div className="big"><CheckCircle2 size={42} strokeWidth={1.5} style={{ color: 'var(--ok)' }} /></div>
+              <p>Todo el inventario está bien surtido</p>
+            </div>
           )}
         </div>
       </div>

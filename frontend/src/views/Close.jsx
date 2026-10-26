@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { api } from '../utils/api';
 import { money, METHODS } from '../utils/format';
+import { Calculator, Heart, Lock } from '../utils/icons';
 import Modal from '../components/Modal';
 
 export default function Close() {
@@ -18,14 +19,14 @@ export default function Close() {
   }, [cash, fail]);
 
   if (!isAdmin()) {
-    return <div className="empty"><div className="big">🔒</div><p>Solo la administradora puede cerrar la caja</p></div>;
+    return <div className="empty"><div className="big"><Lock size={42} strokeWidth={1.5} style={{color:"var(--plum-soft)"}} /></div><p>Solo el admin puede cerrar la caja</p></div>;
   }
 
   if (!cash) {
-    return <div className="empty"><div className="big">🧮</div><p>No hay caja abierta para cerrar</p></div>;
+    return <div className="empty"><div className="big"><Calculator size={42} strokeWidth={1.5} style={{color:"var(--plum-soft)"}} /></div><p>No hay caja abierta para cerrar</p></div>;
   }
 
-  if (!summary) return <div className="empty"><div className="big">💗</div><p>Cargando…</p></div>;
+  if (!summary) return <div className="empty"><div className="big"><Heart size={42} strokeWidth={1.5} style={{color:"var(--rose-400)"}} /></div><p>Cargando…</p></div>;
 
   const diff = Number(counted) - (summary.efectivo_esperado || 0);
 
@@ -59,9 +60,9 @@ export default function Close() {
       <div className="card mb">
         <h3>Por método de pago</h3>
         <div className="grid g4">
-          {Object.entries(METHODS).map(([k, [em, name]]) => (
+          {Object.entries(METHODS).map(([k, [_, name]]) => (
             <div key={k} className="stat">
-              <div className="lbl">{em} {name}</div>
+              <div className="lbl">{name}</div>
               <div className="val" style={{ fontSize: 20 }}>{money(summary.by_method?.[k] || 0)}</div>
             </div>
           ))}
@@ -76,7 +77,7 @@ export default function Close() {
         </div>
         {counted !== '' && (
           <p className={diff === 0 ? 'ok' : 'danger'}>
-            Diferencia: {money(diff)} {diff === 0 ? '✅ Cuadra' : diff > 0 ? 'Sobra' : 'Falta'}
+            Diferencia: {money(diff)} {diff === 0 ? '✓ Cuadra' : diff > 0 ? 'Sobra' : 'Falta'}
           </p>
         )}
         <button className="btn primary big mt" onClick={() => setShowConfirm(true)} disabled={counted === ''}>

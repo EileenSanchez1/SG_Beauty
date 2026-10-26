@@ -26,35 +26,35 @@ export const addDays = (iso, n) => {
 export const num = v => parseInt(String(v).replace(/[^\d-]/g, '')) || 0;
 
 export const METHODS = {
-  efectivo: ['💵', 'Efectivo'],
-  nequi: ['📱', 'Nequi'],
-  daviplata: ['🔴', 'Daviplata'],
-  tarjeta: ['💳', 'Tarjeta'],
+  efectivo: ['efectivo', 'Efectivo'],
+  nequi: ['nequi', 'Nequi'],
+  daviplata: ['daviplata', 'Daviplata'],
+  tarjeta: ['tarjeta', 'Tarjeta'],
 };
 
 export const KINDS = {
-  cadena: ['🔗', 'Cadena diaria'],
-  ahorro: ['🐷', 'Ahorro del jefe'],
-  aseo: ['☕', 'Aseo / tinto'],
-  gasto: ['🧾', 'Gasto'],
-  otro: ['✨', 'Otro'],
+  cadena: ['cadena', 'Cadena diaria'],
+  ahorro: ['ahorro', 'Ahorro del jefe'],
+  aseo: ['aseo', 'Aseo / tinto'],
+  gasto: ['gasto', 'Gasto'],
+  otro: ['otro', 'Otro'],
 };
 
 export const NAV = [
-  ['dashboard', '🏠', 'Inicio', true],
-  ['pos', '🛒', 'Punto de venta', false],
+  ['dashboard', 'dashboard', 'Inicio', true],
+  ['pos', 'pos', 'Punto de venta', false],
   ['sep', 'Inventario'],
-  ['products', '🧴', 'Productos', true],
-  ['inventory', '📦', 'Inventario y pedidos', false],
-  ['labels', '🏷️', 'Etiquetas', true],
+  ['products', 'products', 'Productos', true],
+  ['inventory', 'inventory', 'Inventario y pedidos', false],
+  ['labels', 'labels', 'Etiquetas', true],
   ['sep', 'Dinero'],
-  ['cash', '💰', 'Caja chica y gastos', true],
-  ['close', '🧮', 'Cierre de caja', true],
-  ['sales', '🧾', 'Comprobantes', false],
-  ['reports', '📊', 'Reportes', true],
+  ['cash', 'cash', 'Caja chica y gastos', true],
+  ['close', 'close', 'Cierre de caja', true],
+  ['sales', 'sales', 'Comprobantes', false],
+  ['reports', 'reports', 'Reportes', true],
   ['sep', 'Sistema', true],
-  ['users', '👥', 'Usuarios y roles', true],
-  ['settings', '⚙️', 'Configuración', true],
+  ['users', 'users', 'Usuarios y roles', true],
+  ['settings', 'settings', 'Configuración', true],
 ];
 
 export const TITLES = {

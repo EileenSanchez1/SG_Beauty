@@ -28,7 +28,7 @@ export default function Labels() {
   }, [selected, products]);
 
   if (!isAdmin()) {
-    return <div className="empty"><div className="big">🔒</div><p>Solo la administradora puede imprimir etiquetas</p></div>;
+    return <div className="empty"><div className="big"><Lock size={42} strokeWidth={1.5} style={{color:"var(--plum-soft)"}} /></div><p>Solo el admin puede imprimir etiquetas</p></div>;
   }
 
   const toggle = id => {
@@ -56,7 +56,7 @@ export default function Labels() {
     <>
       <div className="spread mb">
         <p className="muted">Selecciona productos para generar etiquetas con código de barras (SKU).</p>
-        <button className="btn primary" disabled={!selected.size} onClick={print}>🖨️ Imprimir {selected.size} etiquetas</button>
+        <button className="btn primary" disabled={!selected.size} onClick={print}>Imprimir {selected.size} etiquetas</button>
       </div>
       <div className="card">
         <div className="catalog" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))' }}>

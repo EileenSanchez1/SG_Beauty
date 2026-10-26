@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { api } from '../utils/api';
+import { Lock } from '../utils/icons';
 
 export default function Settings() {
   const { settings, setSettings, toast, fail, isAdmin } = useApp();
@@ -12,7 +13,7 @@ export default function Settings() {
   });
 
   if (!isAdmin()) {
-    return <div className="empty"><div className="big">🔒</div><p>Solo la administradora puede cambiar la configuración</p></div>;
+    return <div className="empty"><div className="big"><Lock size={42} strokeWidth={1.5} style={{color:"var(--plum-soft)"}} /></div><p>Solo el admin puede cambiar la configuración</p></div>;
   }
 
   const save = async () => {

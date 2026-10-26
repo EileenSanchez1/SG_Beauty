@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { api } from '../utils/api';
 import { money, METHODS } from '../utils/format';
+import { Sparkles, ShoppingCart, ShoppingBag } from '../utils/icons';
 import Modal from '../components/Modal';
 
 const REASONS = ['Producto dañado', 'Cliente frecuente', 'Promoción', 'Regateo', 'Otro'];
@@ -114,7 +115,7 @@ export default function Pos() {
     <>
       {!cash && (
         <div className="card mb" style={{ background: 'var(--danger-bg)', borderColor: '#ffc3ca' }}>
-          <b>🔒 La caja está cerrada.</b>{' '}
+          <b>La caja está cerrada.</b>{' '}
           {isAdmin() ? <Link to="/cash"><u>Ábrela aquí</u></Link> : 'Pídele al administrador que la abra para poder vender.'}
         </div>
       )}
@@ -135,7 +136,7 @@ export default function Pos() {
             <button className="btn ghost" onClick={() => { setQ(''); focusScan(); }} title="Limpiar">✕</button>
           </div>
           <div className="chips">
-            <button className={`chip ${!cat ? 'on' : ''}`} onClick={() => setCat(0)}>✨ Todo</button>
+            <button className={`chip ${!cat ? 'on' : ''}`} onClick={() => setCat(0)}><Sparkles size={14} strokeWidth={2} style={{marginRight:4}} /> Todo</button>
             {categories.map(c => (
               <button key={c.id} className={`chip ${cat === c.id ? 'on' : ''}`} onClick={() => setCat(c.id)}>
                 {c.emoji} {c.name}
@@ -150,7 +151,7 @@ export default function Pos() {
                 onClick={() => p.stock > 0 && add(p)}
                 disabled={p.stock <= 0}
               >
-                <div className="thumb">{p.image ? <img src={p.image} alt="" /> : (p.emoji || '🛍️')}</div>
+                <div className="thumb">{p.image ? <img src={p.image} alt="" /> : (p.emoji || <ShoppingBag size={20} strokeWidth={1.5} style={{color:'var(--plum-soft)'}} />)}</div>
                 <div className="info">
                   <b>{p.name}</b>
                   <span className="muted small">{p.sku}</span>
@@ -164,7 +165,7 @@ export default function Pos() {
         </div>
         <div className="card cart">
           <div className="spread">
-            <h3>🛍️ Carrito</h3>
+            <h3 style={{display:"flex",alignItems:"center",gap:8}}><ShoppingCart size={18} strokeWidth={2} /> Carrito</h3>
             <button className="btn sm danger" onClick={() => setCart(new Map())}>Vaciar</button>
           </div>
           <div className="cart-lines">
@@ -199,7 +200,7 @@ export default function Pos() {
                 </div>
               </div>
             )) : (
-              <div className="empty"><div className="big">🛒</div><p>Toca un producto o escanea un código para empezar</p></div>
+              <div className="empty"><div className="big"><ShoppingCart size={42} strokeWidth={1.5} style={{color:"var(--plum-soft)"}} /></div><p>Toca un producto o escanea un código para empezar</p></div>
             )}
           </div>
           <div className="totals">
@@ -219,9 +220,9 @@ export default function Pos() {
           <div className="field">
             <label>Método de pago</label>
             <div className="chips">
-              {Object.entries(METHODS).map(([k, [em, name]]) => (
+              {Object.entries(METHODS).map(([k, [_, name]]) => (
                 <button key={k} type="button" className={`chip ${payData.method === k ? 'on' : ''}`} onClick={() => setPayData(d => ({ ...d, method: k }))}>
-                  {em} {name}
+                  {name}
                 </button>
               ))}
             </div>

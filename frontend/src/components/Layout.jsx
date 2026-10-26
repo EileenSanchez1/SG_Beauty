@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { NAV, TITLES, money } from '../utils/format';
+import { NavIcon, LogOut } from '../utils/icons';
 
 export default function Layout() {
   const { user, cash, logout, isAdmin } = useApp();
@@ -19,7 +20,6 @@ export default function Layout() {
     <div className="shell">
       <aside className={`side ${sideOpen ? 'open' : ''}`} id="side">
         <div className="brand" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {/* Logo cargado desde public/logosg.jpg */}
           <img 
             src="/logosg.jpg" 
             alt="SG Beauty Logo" 
@@ -47,7 +47,7 @@ export default function Layout() {
                 className={({ isActive }) => (isActive ? 'active' : '')}
                 onClick={() => setSideOpen(false)}
               >
-                <span className="ic">{n[1]}</span> {n[2]}
+                <span className="ic"><NavIcon name={n[1]} size={18} /></span> {n[2]}
               </NavLink>
             )
           )}
@@ -56,9 +56,11 @@ export default function Layout() {
           <div className="avatar">{user?.full_name?.[0] || '?'}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <b style={{ display: 'block', fontSize: 14 }}>{user?.full_name}</b>
-            <small className="muted">{isAdmin() ? 'Administradora' : 'Vendedora'}</small>
+            <small className="muted">{isAdmin() ? 'Administrador' : 'Vendedor'}</small>
           </div>
-          <button className="x" onClick={logout} title="Salir">⏻</button>
+          <button className="x" onClick={logout} title="Salir">
+            <LogOut size={18} strokeWidth={2} />
+          </button>
         </div>
       </aside>
       {sideOpen && <div className="overlay" onClick={() => setSideOpen(false)} style={{ zIndex: 40 }} />}

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { api } from '../utils/api';
 import { money, KINDS, METHODS, fdt } from '../utils/format';
+import { Wallet, FileText, KindIcon } from '../utils/icons';
 import Modal from '../components/Modal';
 
 export default function Cash() {
@@ -51,14 +52,14 @@ export default function Cash() {
   };
 
   if (!isAdmin()) {
-    return <div className="empty"><div className="big">🔒</div><p>Solo la administradora puede gestionar la caja</p></div>;
+    return <div className="empty"><div className="big"><Wallet size={42} strokeWidth={1.5} style={{color:"var(--plum-soft)"}} /></div><p>Solo el admin puede gestionar la caja</p></div>;
   }
 
   return (
     <>
       {!cash ? (
         <div className="card">
-          <h3>💰 Abrir caja del día</h3>
+          <h3 style={{display:"flex",alignItems:"center",gap:8}}><Wallet size={20} strokeWidth={2} /> Abrir caja del día</h3>
           <p className="muted mb">Registra la base inicial de efectivo antes de empezar a vender.</p>
           <button className="btn primary big" onClick={() => setShowOpen(true)}>Abrir caja</button>
         </div>
@@ -92,7 +93,7 @@ export default function Cash() {
                   {moves.map(m => (
                     <tr key={m.id}>
                       <td>{fdt(m.created_at)}</td>
-                      <td>{KINDS[m.kind]?.[0]} {KINDS[m.kind]?.[1] || m.kind}</td>
+                      <td><span style={{display:"inline-flex",alignItems:"center",gap:6}}><KindIcon name={m.kind} size={14} /> {KINDS[m.kind]?.[1] || m.kind}</span></td>
                       <td>{METHODS[m.method]?.[1] || m.method}</td>
                       <td>{m.note || '—'}</td>
                       <td><b>{money(m.amount)}</b></td>
@@ -101,7 +102,7 @@ export default function Cash() {
                 </tbody>
               </table>
             ) : (
-              <div className="empty"><div className="big">🧾</div><p>Sin salidas registradas hoy</p></div>
+              <div className="empty"><div className="big"><FileText size={42} strokeWidth={1.5} style={{color:"var(--plum-soft)"}} /></div><p>Sin salidas registradas hoy</p></div>
             )}
           </div>
         </>
@@ -125,7 +126,7 @@ export default function Cash() {
           <div className="field">
             <label>Tipo</label>
             <select className="input" value={moveForm.kind} onChange={e => setMoveForm(f => ({ ...f, kind: e.target.value }))}>
-              {Object.entries(KINDS).map(([k, [em, name]]) => <option key={k} value={k}>{em} {name}</option>)}
+              {Object.entries(KINDS).map(([k, [_, name]]) => <option key={k} value={k}>{name}</option>)}
             </select>
           </div>
           <div className="field">
@@ -135,7 +136,7 @@ export default function Cash() {
           <div className="field">
             <label>Método</label>
             <select className="input" value={moveForm.method} onChange={e => setMoveForm(f => ({ ...f, method: e.target.value }))}>
-              {Object.entries(METHODS).map(([k, [em, name]]) => <option key={k} value={k}>{em} {name}</option>)}
+              {Object.entries(METHODS).map(([k, [_, name]]) => <option key={k} value={k}>{name}</option>)}
             </select>
           </div>
           <div className="field">

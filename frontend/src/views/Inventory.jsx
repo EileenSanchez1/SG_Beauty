@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { api } from '../utils/api';
+import { AlertTriangle, ClipboardList, Package } from '../utils/icons';
 import { money } from '../utils/format';
 
 export default function Inventory() {
@@ -25,9 +26,9 @@ export default function Inventory() {
       <div className="spread mb">
         <div className="gap">
           <button className={`chip ${!lowOnly ? 'on' : ''}`} onClick={() => setLowOnly(false)}>Todos</button>
-          <button className={`chip ${lowOnly ? 'on' : ''}`} onClick={() => setLowOnly(true)}>⚠️ Por agotarse</button>
+          <button className={`chip ${lowOnly ? 'on' : ''}`} onClick={() => setLowOnly(true)}><AlertTriangle size={14} strokeWidth={2} style={{marginRight:4}} /> Por agotarse</button>
         </div>
-        <button className="btn primary" onClick={printOrder} disabled={!orderList.length}>📋 Lista de pedido a proveedores</button>
+        <button className="btn primary" onClick={printOrder} disabled={!orderList.length}><ClipboardList size={16} strokeWidth={2} style={{marginRight:6}} /> Lista de pedido a proveedores</button>
       </div>
       <div className="card">
         <table className="table">
@@ -54,7 +55,7 @@ export default function Inventory() {
             ))}
           </tbody>
         </table>
-        {!list.length && <div className="empty"><div className="big">📦</div><p>Sin productos en esta vista</p></div>}
+        {!list.length && <div className="empty"><div className="big"><Package size={42} strokeWidth={1.5} style={{color:"var(--plum-soft)"}} /></div><p>Sin productos en esta vista</p></div>}
       </div>
     </>
   );

@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { api } from '../utils/api';
 import { money } from '../utils/format';
 import Modal from '../components/Modal';
+import { Droplets, ShoppingBag } from '../utils/icons';
 
 export default function Products() {
   const { categories, toast, fail, isAdmin, loadCategories } = useApp();
@@ -90,7 +91,7 @@ export default function Products() {
           <tbody>
             {filtered.map(p => (
               <tr key={p.id} className={!p.active ? 'muted' : ''}>
-                <td><div className="thumb sm">{p.image ? <img src={p.image} alt="" /> : (p.emoji || '🛍️')}</div></td>
+                <td><div className="thumb sm">{p.image ? <img src={p.image} alt="" /> : (p.emoji || <ShoppingBag size={18} strokeWidth={1.5} style={{color:'var(--plum-soft)'}} />)}</div></td>
                 <td><code>{p.sku}</code></td>
                 <td><b>{p.name}</b></td>
                 <td>{p.category}</td>
@@ -109,7 +110,7 @@ export default function Products() {
             ))}
           </tbody>
         </table>
-        {!filtered.length && <div className="empty"><div className="big">🧴</div><p>Sin productos</p></div>}
+        {!filtered.length && <div className="empty"><div className="big"><Droplets size={42} strokeWidth={1.5} style={{color:"var(--plum-soft)"}} /></div><p>Sin productos</p></div>}
       </div>
 
       {showForm && (

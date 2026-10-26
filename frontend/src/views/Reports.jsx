@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { api } from '../utils/api';
 import { money, today, addDays } from '../utils/format';
+import { Heart, Lock } from '../utils/icons';
 
 export default function Reports() {
   const { fail, isAdmin } = useApp();
@@ -15,7 +16,7 @@ export default function Reports() {
   useEffect(() => { if (isAdmin()) load(); }, [from, to]);
 
   if (!isAdmin()) {
-    return <div className="empty"><div className="big">🔒</div><p>Solo la administradora puede ver reportes</p></div>;
+    return <div className="empty"><div className="big"><Lock size={42} strokeWidth={1.5} style={{color:"var(--plum-soft)"}} /></div><p>Solo el admin puede ver reportes</p></div>;
   }
 
   return (
@@ -34,7 +35,7 @@ export default function Reports() {
         <button className="btn primary" onClick={load}>Actualizar</button>
       </div>
       {!data ? (
-        <div className="empty"><div className="big">💗</div><p>Cargando…</p></div>
+        <div className="empty"><div className="big"><Heart size={42} strokeWidth={1.5} style={{color:"var(--rose-400)"}} /></div><p>Cargando…</p></div>
       ) : (
         <>
           <div className="grid g3 mb">

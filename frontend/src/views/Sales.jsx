@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { api } from '../utils/api';
 import { money, METHODS, fdt } from '../utils/format';
+import { FileText } from '../utils/icons';
 
 export default function Sales() {
   const { fail, toast, isAdmin } = useApp();
@@ -51,7 +52,7 @@ export default function Sales() {
           ))}
         </tbody>
       </table>
-      {!sales.length && <div className="empty"><div className="big">🧾</div><p>Sin comprobantes aún</p></div>}
+      {!sales.length && <div className="empty"><div className="big"><FileText size={42} strokeWidth={1.5} style={{color:"var(--plum-soft)"}} /></div><p>Sin comprobantes aún</p></div>}
     </div>
   );
 }

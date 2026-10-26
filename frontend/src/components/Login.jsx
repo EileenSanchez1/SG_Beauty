@@ -44,7 +44,7 @@ export default function Login() {
           </button>
         </form>
         <div className="hint">
-          🌸 <b>Demo:</b> <code>admin</code> / <code>admin123</code> (administradora) · <code>vendedor</code> / <code>vendedor123</code>
+          <b>Demo:</b> <code>admin</code> / <code>admin123</code> (administrador) · <code>vendedor</code> / <code>vendedor123</code>
         </div>
       </div>
     </div>

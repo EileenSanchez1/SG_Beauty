@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { api } from '../utils/api';
 import Modal from '../components/Modal';
+import { Lock } from '../utils/icons';
 
 export default function Users() {
   const { fail, toast, isAdmin } = useApp();
@@ -13,7 +14,7 @@ export default function Users() {
   useEffect(() => { if (isAdmin()) load(); }, []);
 
   if (!isAdmin()) {
-    return <div className="empty"><div className="big">🔒</div><p>Solo la administradora puede gestionar usuarios</p></div>;
+    return <div className="empty"><div className="big"><Lock size={42} strokeWidth={1.5} style={{color:"var(--plum-soft)"}} /></div><p>Solo el admin puede gestionar usuarios</p></div>;
   }
 
   const save = async () => {
