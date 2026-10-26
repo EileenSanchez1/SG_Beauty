@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.db import Base, engine, SessionLocal
 from app.api import router
 from app import models, seed
+from app.migrate import run_migrations
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIST = os.path.join(os.path.dirname(BASE), "frontend", "dist")
@@ -25,6 +26,10 @@ app.add_middleware(
 @app.on_event("startup")
 def startup():
     Base.metadata.create_all(engine)
+    try:
+        run_migrations()
+    except Exception as e:
+        print("migrate warning:", e)
     with SessionLocal() as db:
         seed.run(db)
 

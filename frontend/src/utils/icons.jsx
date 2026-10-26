@@ -34,6 +34,14 @@ import {
   TrendingUp,
   AlertCircle,
   Lock,
+  FileDown,
+  MessageCircle,
+  Printer,
+  Eye,
+  Truck,
+  History,
+  Shield,
+  Download,
 } from 'lucide-react';
 
 export const NavIcons = {
@@ -41,11 +49,14 @@ export const NavIcons = {
   pos: ShoppingCart,
   products: Droplets,
   inventory: Package,
+  movements: History,
+  suppliers: Truck,
   labels: Tag,
   cash: Wallet,
   close: Calculator,
   sales: Receipt,
   reports: BarChart3,
+  audit: Shield,
   users: Users,
   settings: Settings,
 };
@@ -116,4 +127,12 @@ export {
   TrendingUp,
   AlertCircle,
   Lock,
+  FileDown,
+  MessageCircle,
+  Printer,
+  Eye,
+  Truck,
+  History,
+  Shield,
+  Download,
 };

@@ -94,6 +94,7 @@ export default function Pos() {
         customer_phone: payData.customer_phone || null,
       };
       const sale = await api('/sales', { method: 'POST', body });
+      const phone = payData.customer_phone;
       toast('Venta registrada 💖');
       setCart(new Map());
       setShowPay(false);
@@ -101,10 +102,28 @@ export default function Pos() {
       // Refresh products stock
       const prods = await api('/products');
       setProducts(prods);
-      // Show simple receipt toast
       if (sale) {
         const text = `Comprobante Nº ${String(sale.number).padStart(5, '0')} · ${money(sale.total)}`;
         toast(text, 'ok');
+        // Envío por WhatsApp en 1 clic (propuesta)
+        if (phone) {
+          let p = String(phone).replace(/\D/g, '');
+          if (p.length === 10) p = '57' + p;
+          const itemsTxt = (sale.items || []).map(i =>
+            `• ${i.name} x${i.qty} = ${money(i.line_total ?? i.qty * i.unit_price)}`
+          ).join('\n');
+          const msg = [
+            `*Comprobante Nº ${String(sale.number).padStart(5, '0')}*`,
+            itemsTxt,
+            '',
+            `*TOTAL: ${money(sale.total)}*`,
+            '_Documento interno · Gracias por tu compra 💖_',
+          ].join('\n');
+          window.open(`https://wa.me/${p}?text=${encodeURIComponent(msg)}`, '_blank');
+          try {
+            await api(`/sales/${sale.id}/whatsapp-sent`, { method: 'POST', body: { phone } });
+          } catch (_) {}
+        }
       }
     } catch (e) {
       fail(e);

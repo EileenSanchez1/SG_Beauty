@@ -40,12 +40,22 @@ export const KINDS = {
   otro: ['otro', 'Otro'],
 };
 
+export const MOVE_KINDS = {
+  entrada: 'Entrada',
+  venta: 'Venta',
+  ajuste: 'Ajuste',
+  anulacion: 'Anulación',
+  devolucion: 'Devolución',
+};
+
 export const NAV = [
   ['dashboard', 'dashboard', 'Inicio', true],
   ['pos', 'pos', 'Punto de venta', false],
   ['sep', 'Inventario'],
   ['products', 'products', 'Productos', true],
   ['inventory', 'inventory', 'Inventario y pedidos', false],
+  ['movements', 'movements', 'Movimientos stock', true],
+  ['suppliers', 'suppliers', 'Proveedores', true],
   ['labels', 'labels', 'Etiquetas', true],
   ['sep', 'Dinero'],
   ['cash', 'cash', 'Caja chica y gastos', true],
@@ -53,6 +63,7 @@ export const NAV = [
   ['sales', 'sales', 'Comprobantes', false],
   ['reports', 'reports', 'Reportes', true],
   ['sep', 'Sistema', true],
+  ['audit', 'audit', 'Auditoría', true],
   ['users', 'users', 'Usuarios y roles', true],
   ['settings', 'settings', 'Configuración', true],
 ];
@@ -62,11 +73,14 @@ export const TITLES = {
   pos: 'Punto de venta',
   products: 'Productos',
   inventory: 'Inventario y pedidos',
+  movements: 'Movimientos de inventario',
+  suppliers: 'Proveedores',
   labels: 'Etiquetas',
   cash: 'Caja chica y gastos',
   close: 'Cierre de caja',
   sales: 'Comprobantes',
   reports: 'Reportes',
+  audit: 'Auditoría',
   users: 'Usuarios y roles',
   settings: 'Configuración',
 };

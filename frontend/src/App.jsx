@@ -14,6 +14,9 @@ import Sales from './views/Sales';
 import Reports from './views/Reports';
 import Users from './views/Users';
 import Settings from './views/Settings';
+import Suppliers from './views/Suppliers';
+import Movements from './views/Movements';
+import Audit from './views/Audit';
 
 function PrivateRoutes() {
   const { isAdmin } = useApp();
@@ -24,11 +27,14 @@ function PrivateRoutes() {
         <Route path="/pos" element={<Pos />} />
         <Route path="/products" element={<Products />} />
         <Route path="/inventory" element={<Inventory />} />
+        <Route path="/movements" element={<Movements />} />
+        <Route path="/suppliers" element={<Suppliers />} />
         <Route path="/labels" element={<Labels />} />
         <Route path="/cash" element={<Cash />} />
         <Route path="/close" element={<Close />} />
         <Route path="/sales" element={<Sales />} />
         <Route path="/reports" element={<Reports />} />
+        <Route path="/audit" element={<Audit />} />
         <Route path="/users" element={<Users />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<Navigate to={isAdmin() ? '/dashboard' : '/pos'} replace />} />

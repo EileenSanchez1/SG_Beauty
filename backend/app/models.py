@@ -28,6 +28,18 @@ class Setting(Base):
     value: Mapped[str] = mapped_column(Text, default="")
 
 
+class Supplier(Base):
+    """Proveedores del negocio (compras y pedidos)."""
+    __tablename__ = "suppliers"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(150))
+    phone: Mapped[str] = mapped_column(String(40), default="")
+    email: Mapped[str] = mapped_column(String(120), default="")
+    notes: Mapped[str] = mapped_column(String(300), default="")
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
+
+
 class Category(Base):
     __tablename__ = "categories"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -42,11 +54,12 @@ class Product(Base):
     __tablename__ = "products"
     id: Mapped[int] = mapped_column(primary_key=True)
     sku: Mapped[str] = mapped_column(String(20), unique=True)  # 100-001
-    barcode: Mapped[str | None] = mapped_column(String(40), unique=True, nullable=True)  # código de fábrica
+    barcode: Mapped[str | None] = mapped_column(String(40), unique=True, nullable=True)
     name: Mapped[str] = mapped_column(String(150))
     category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"))
     origin: Mapped[str] = mapped_column(String(10), default="propio")  # fabrica | propio
-    supplier: Mapped[str] = mapped_column(String(120), default="")
+    supplier: Mapped[str] = mapped_column(String(120), default="")  # texto legado
+    supplier_id: Mapped[int | None] = mapped_column(ForeignKey("suppliers.id"), nullable=True)
     cost: Mapped[int] = mapped_column(Integer, default=0)
     price: Mapped[int] = mapped_column(Integer, default=0)
     stock: Mapped[int] = mapped_column(Integer, default=0)
@@ -55,6 +68,7 @@ class Product(Base):
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
     category = relationship("Category", back_populates="products")
+    supplier_rel = relationship("Supplier")
 
 
 class StockEntry(Base):
@@ -64,10 +78,41 @@ class StockEntry(Base):
     qty: Mapped[int] = mapped_column(Integer)
     unit_cost: Mapped[int] = mapped_column(Integer, default=0)
     supplier: Mapped[str] = mapped_column(String(120), default="")
+    supplier_id: Mapped[int | None] = mapped_column(ForeignKey("suppliers.id"), nullable=True)
     note: Mapped[str] = mapped_column(String(200), default="")
     user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
     product = relationship("Product")
+
+
+class InventoryMovement(Base):
+    """Trazabilidad de stock: entradas, ventas, ajustes, anulaciones, devoluciones."""
+    __tablename__ = "inventory_movements"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"))
+    qty: Mapped[int] = mapped_column(Integer)  # positivo = entra, negativo = sale
+    kind: Mapped[str] = mapped_column(String(20))  # entrada | venta | ajuste | anulacion | devolucion
+    ref_type: Mapped[str] = mapped_column(String(20), default="")  # sale | entry | adjust
+    ref_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    note: Mapped[str] = mapped_column(String(250), default="")
+    stock_after: Mapped[int] = mapped_column(Integer, default=0)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
+    product = relationship("Product")
+    user = relationship("User")
+
+
+class AuditLog(Base):
+    """Quién hizo qué (acciones sensibles)."""
+    __tablename__ = "audit_logs"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    username: Mapped[str] = mapped_column(String(50), default="")
+    action: Mapped[str] = mapped_column(String(40))  # void_sale | close_cash | update_product | ...
+    entity: Mapped[str] = mapped_column(String(40), default="")
+    entity_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    detail: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
 
 
 class CashSession(Base):
@@ -109,7 +154,9 @@ class Sale(Base):
     received: Mapped[int] = mapped_column(Integer, default=0)
     customer_name: Mapped[str] = mapped_column(String(100), default="")
     customer_phone: Mapped[str] = mapped_column(String(30), default="")
-    status: Mapped[str] = mapped_column(String(10), default="ok")  # ok | anulada
+    status: Mapped[str] = mapped_column(String(10), default="ok")  # ok | anulada | devuelta
+    whatsapp_sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    whatsapp_phone: Mapped[str] = mapped_column(String(30), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
     items = relationship("SaleItem", back_populates="sale", cascade="all, delete-orphan")
     user = relationship("User")
