@@ -153,7 +153,8 @@ export default function Pos() {
       {!cash && (
         <div className="card mb" style={{ background: 'var(--danger-bg)', borderColor: '#ffc3ca' }}>
           <b>La caja está cerrada.</b>{' '}
-          {isAdmin() ? <Link to="/cash"><u>Ábrela aquí</u></Link> : 'Pídele al administrador que la abra para poder vender.'}
+          Ábrela para poder registrar las ventas de hoy. No olvides cerrarla al final del día.{' '}
+          <Link to="/cash"><u>Abrir caja</u></Link>
         </div>
       )}
       <div className="pos">

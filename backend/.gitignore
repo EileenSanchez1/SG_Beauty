@@ -2,6 +2,7 @@ __pycache__/
 *.pyc
 belleza.db
 .env
+venv
 static/uploads/*
 !static/uploads/.gitkeep
 static/uploads/*

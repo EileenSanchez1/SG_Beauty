@@ -43,7 +43,7 @@ export default function Dashboard() {
     api('/reports/dashboard')
       .then(setD)
       .catch(fail);
-  }, [fail]);
+  }, [fail, cash]);
 
   if (!d) return (
     <div className="empty">
@@ -54,7 +54,8 @@ export default function Dashboard() {
 
   const hr = new Date().getHours();
   const greet = hr < 12 ? 'Buenos días' : hr < 19 ? 'Buenas tardes' : 'Buenas noches';
-  const c = d.cash;
+  const cashBox = d.cash || null;
+  const cajaAbierta = cashBox ? (cashBox.status === 'abierta' || cashBox.is_open === true) : false;
 
   return (
     <>
@@ -66,14 +67,14 @@ export default function Dashboard() {
           </h1>
           <p className="muted" style={{ margin: '6px 0 0' }}>
             {new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })} ·{' '}
-            {c ? 'La caja está abierta, ¡a vender!' : 'Aún no has abierto la caja de hoy.'}
+            {cajaAbierta ? 'La caja está abierta, ¡a vender!' : 'Aún no has abierto la caja de hoy.'}
           </p>
         </div>
         <div className="gap">
           <Link className="btn primary big" to="/pos">
             <ShoppingCart size={18} strokeWidth={2} style={{ marginRight: 6 }} /> Nueva venta
           </Link>
-          {c ? (
+          {cajaAbierta ? (
             <Link className="btn ghost big" to="/close">
               <Calculator size={18} strokeWidth={2} style={{ marginRight: 6 }} /> Cerrar caja
             </Link>
@@ -94,14 +95,24 @@ export default function Dashboard() {
         <div className="card stat">
           <span className="em"><Banknote size={28} strokeWidth={1.75} /></span>
           <div className="lbl">Efectivo esperado</div>
-          <div className="val">{c ? money(c.efectivo_esperado) : '—'}</div>
-          <div className="sub">{c ? `Base ${money(c.base)} + ventas − salidas` : 'Caja cerrada'}</div>
+          <div className="val">{cashBox ? money(cashBox.efectivo_esperado) : '—'}</div>
+          <div className="sub">
+            {cashBox
+              ? (cajaAbierta
+                  ? `Base ${money(cashBox.base)} + efectivo − salidas`
+                  : `Última caja · base ${money(cashBox.base)} · cerrada`)
+              : 'Sin sesión de caja aún'}
+          </div>
         </div>
         <div className="card stat">
           <span className="em"><FileText size={28} strokeWidth={1.75} /></span>
           <div className="lbl">Salidas de hoy</div>
-          <div className="val">{c ? money(c.gastos) : '—'}</div>
-          <div className="sub">Cadenas, ahorros y gastos</div>
+          <div className="val">{cashBox ? money(cashBox.gastos ?? 0) : money(0)}</div>
+          <div className="sub">
+            {cashBox
+              ? (cajaAbierta ? 'Cadenas, ahorros y gastos' : 'Salidas de la última caja')
+              : 'Cadenas, ahorros y gastos'}
+          </div>
         </div>
         <div className="card stat">
           <span className="em"><AlertTriangle size={28} strokeWidth={1.75} /></span>

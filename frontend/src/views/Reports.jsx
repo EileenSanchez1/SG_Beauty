@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { api, getToken } from '../utils/api';
-import { money, today, addDays, METHODS, KINDS } from '../utils/format';
+import { money, today, addDays, METHODS } from '../utils/format';
 import { Heart, Lock, FileDown } from '../utils/icons';
 
 export default function Reports() {
-  const { fail, isAdmin, toast } = useApp();
+  const { fail, toast, isAdmin } = useApp();
   const [from, setFrom] = useState(addDays(today(), -7));
   const [to, setTo] = useState(today());
   const [data, setData] = useState(null);
@@ -13,10 +13,10 @@ export default function Reports() {
 
   const load = () => {
     setData(null);
-    api(`/reports/period?from=${from}&to=${to}`).then(setData).catch(fail);
+    api(`/reports/summary?date_from=${from}&date_to=${to}`).then(setData).catch(fail);
   };
-  useEffect(() => { if (isAdmin()) load(); }, [from, to]);
 
+  useEffect(() => { if (isAdmin()) load(); }, [from, to]);
 
   const downloadExcel = async () => {
     try {
@@ -24,7 +24,7 @@ export default function Reports() {
       const res = await fetch(`/api/export/sales.xlsx?date_from=${from}&date_to=${to}`, {
         headers: token ? { Authorization: 'Bearer ' + token } : {},
       });
-      if (!res.ok) throw new Error('No se pudo generar el Excel');
+      if (!res.ok) throw new Error('No se pudo exportar');
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -40,13 +40,10 @@ export default function Reports() {
     setLoadingPdf(true);
     try {
       const token = getToken();
-      const res = await fetch(`/api/reports/pdf?from=${from}&to=${to}`, {
+      const res = await fetch(`/api/reports/pdf?date_from=${from}&date_to=${to}`, {
         headers: token ? { Authorization: 'Bearer ' + token } : {},
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || 'No se pudo generar el PDF');
-      }
+      if (!res.ok) throw new Error('No se pudo generar el PDF');
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -55,11 +52,8 @@ export default function Reports() {
       a.click();
       URL.revokeObjectURL(url);
       toast('PDF descargado');
-    } catch (e) {
-      fail(e);
-    } finally {
-      setLoadingPdf(false);
-    }
+    } catch (e) { fail(e); }
+    finally { setLoadingPdf(false); }
   };
 
   if (!isAdmin()) {
@@ -74,7 +68,6 @@ export default function Reports() {
   const count = data?.count ?? data?.n_sales ?? 0;
   const top = data?.top || [];
   const byMethod = data?.by_method || {};
-  const byCat = data?.by_category || [];
   const expByKind = data?.expenses_by_kind || {};
 
   return (
@@ -107,35 +100,31 @@ export default function Reports() {
         </div>
       ) : (
         <>
-          <div className="grid g3 mb">
+          <div className="grid g2 mb">
             <div className="card stat hot">
               <div className="lbl">Ventas del periodo</div>
               <div className="val">{money(data.total)}</div>
               <div className="sub">{count} comprobantes</div>
             </div>
             <div className="card stat">
-              <div className="lbl">Descuentos</div>
+              <div className="lbl">Descuentos aplicados</div>
               <div className="val">{money(data.discounts)}</div>
-            </div>
-            <div className="card stat">
-              <div className="lbl">Ticket promedio</div>
-              <div className="val">{money(count ? data.total / count : 0)}</div>
+              <div className="sub">Bajan la ganancia (ej. cliente lista 5%)</div>
             </div>
           </div>
 
-          <div className="grid g3 mb">
+          <div className="grid g2 mb">
             <div className="card stat">
               <div className="lbl">Ganancia estimada</div>
               <div className="val">{money(data.profit)}</div>
-              <div className="sub">Margen {data.margin ?? 0}%</div>
+              <div className="sub">
+                (Precio de venta − costo proveedor) − descuentos. Margen {data.margin ?? 0}%
+              </div>
             </div>
             <div className="card stat">
-              <div className="lbl">Gastos / salidas</div>
+              <div className="lbl">Gastos / salidas de caja</div>
               <div className="val">{money(data.expenses)}</div>
-            </div>
-            <div className="card stat">
-              <div className="lbl">Neto (ventas − gastos)</div>
-              <div className="val">{money((data.total || 0) - (data.expenses || 0))}</div>
+              <div className="sub">Cadena, aseo, propina, ahorro…</div>
             </div>
           </div>
 
@@ -151,6 +140,20 @@ export default function Reports() {
             </div>
           </div>
 
+          {!!Object.keys(expByKind).length && (
+            <div className="card mb">
+              <h3>Gastos por tipo</h3>
+              <div className="grid g4">
+                {Object.entries(expByKind).map(([k, v]) => (
+                  <div key={k} className="stat">
+                    <div className="lbl">{k}</div>
+                    <div className="val" style={{ fontSize: 18 }}>{money(v)}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="card mb">
             <h3>Productos más vendidos</h3>
             {top.length ? (
@@ -160,13 +163,13 @@ export default function Reports() {
                     <th>SKU</th>
                     <th>Producto</th>
                     <th>Unidades</th>
-                    <th>Total</th>
-                    <th>Ganancia</th>
+                    <th>Total vendido</th>
+                    <th>Ganancia est.</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {top.map((p, i) => (
-                    <tr key={i}>
+                  {top.map(p => (
+                    <tr key={p.sku}>
                       <td><code>{p.sku}</code></td>
                       <td>{p.name}</td>
                       <td>{p.qty}</td>
@@ -177,43 +180,9 @@ export default function Reports() {
                 </tbody>
               </table>
             ) : (
-              <p className="muted">Sin datos en este periodo</p>
+              <p className="muted">Sin ventas en el periodo</p>
             )}
           </div>
-
-          {byCat.length > 0 && (
-            <div className="card mb">
-              <h3>Ventas por categoría</h3>
-              <table className="table">
-                <thead><tr><th>Categoría</th><th>Total</th></tr></thead>
-                <tbody>
-                  {byCat.map((c, i) => (
-                    <tr key={i}>
-                      <td>{c.name}</td>
-                      <td>{money(c.total)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {Object.keys(expByKind).length > 0 && (
-            <div className="card">
-              <h3>Salidas de caja (cadenas, ahorros, gastos)</h3>
-              <table className="table">
-                <thead><tr><th>Tipo</th><th>Monto</th></tr></thead>
-                <tbody>
-                  {Object.entries(expByKind).map(([k, v]) => (
-                    <tr key={k}>
-                      <td>{KINDS[k]?.[1] || k}</td>
-                      <td>{money(v)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
         </>
       )}
     </>

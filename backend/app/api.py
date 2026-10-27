@@ -724,6 +724,7 @@ def sale_whatsapp_sent(sid: int, body: dict | None = None, db: Session = Depends
 
 
 # ───────────── reportes ─────────────
+@router.get("/dashboard")
 @router.get("/reports/dashboard")
 def dashboard(db: Session = Depends(get_db), _: User = Depends(admin_only)):
     today = now().date()
@@ -738,9 +739,22 @@ def dashboard(db: Session = Depends(get_db), _: User = Depends(admin_only)):
                      .order_by(Product.stock)).unique().all()
     low = [product_out(p, True) for p in low if p.stock <= p.min_stock]
     cs = open_session(db)
-    return dict(today_total=sum(s.total for s in today_sales), today_count=len(today_sales),
-                week=[dict(day=k, total=v) for k, v in days.items()], low_count=len(low), low=low[:8],
-                cash=session_summary(db, cs) if cs else None)
+    cash_open = cs is not None
+    if not cs:
+        # Última sesión (hoy o la más reciente) para que el inicio no quede en "—"
+        cs = db.scalar(select(CashSession).order_by(CashSession.id.desc()).limit(1))
+    cash_info = session_summary(db, cs) if cs else None
+    if cash_info is not None:
+        cash_info = dict(cash_info)
+        cash_info["is_open"] = cash_open
+    return dict(
+        today_total=sum(s.total for s in today_sales),
+        today_count=len(today_sales),
+        week=[dict(day=k, total=v) for k, v in days.items()],
+        low_count=len(low),
+        low=low[:8],
+        cash=cash_info,
+    )
 
 
 def _build_report(db: Session, date_from: str | None, date_to: str | None):
@@ -1223,7 +1237,7 @@ def backup_json(db: Session = Depends(get_db), me: User = Depends(admin_only)):
 
 # ───────────── alerta stock bajo (link WhatsApp jefe) ─────────────
 @router.get("/alerts/low-stock-whatsapp")
-def low_stock_whatsapp(db: Session = Depends(get_db), _: User = Depends(admin_only)):
+def low_stock_whatsapp(db: Session = Depends(get_db), me: User = Depends(current_user)):
     settings = get_settings(db)
     phone = (settings.get("boss_phone") or settings.get("business_whatsapp") or "").strip()
     lows = [p for p in db.scalars(select(Product).where(Product.active == True)).all()  # noqa
