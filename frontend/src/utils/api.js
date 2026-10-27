@@ -24,12 +24,14 @@ export async function api(path, { method = 'GET', body, form } = {}) {
   } catch {
     throw new Error('Sin conexión con el servidor');
   }
+  const data = await res.json().catch(() => ({}));
   if (res.status === 401) {
+    if (path === '/auth/login' || path.startsWith('/auth/login')) {
+      throw new Error(typeof data.detail === 'string' ? data.detail : 'Usuario o contraseña incorrectos');
+    }
     setToken(null);
-    window.location.hash = '';
     throw new Error('Sesión vencida');
   }
-  const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(typeof data.detail === 'string' ? data.detail : 'Revisa los datos ingresados');
   }

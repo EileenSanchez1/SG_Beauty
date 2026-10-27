@@ -48,6 +48,7 @@ export const NavIcons = {
   dashboard: Home,
   pos: ShoppingCart,
   products: Droplets,
+  categories: Layers,
   inventory: Package,
   movements: History,
   suppliers: Truck,

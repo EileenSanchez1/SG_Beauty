@@ -26,11 +26,19 @@ export const addDays = (iso, n) => {
 export const num = v => parseInt(String(v).replace(/[^\d-]/g, '')) || 0;
 
 export const METHODS = {
-  efectivo: ['efectivo', 'Efectivo'],
-  nequi: ['nequi', 'Nequi'],
-  daviplata: ['daviplata', 'Daviplata'],
-  tarjeta: ['tarjeta', 'Tarjeta'],
+  efectivo: ['💵', 'Efectivo'],
+  nequi: ['💜', 'Nequi'],
+  daviplata: ['🔴', 'Daviplata'],
+  tarjeta: ['💳', 'Tarjeta'],
+  qr: ['📱', 'QR'],
+  addi: ['➕', 'Addi'],
+  sistecredito: ['🏦', 'Sistecrédito'],
 };
+
+/** Métodos con recargo 8% sobre el neto (después de descuentos). */
+export const FINANCE_METHODS = ['addi', 'sistecredito'];
+export const FINANCE_RATE = 0.08;
+
 
 export const KINDS = {
   cadena: ['cadena', 'Cadena diaria'],
@@ -53,13 +61,14 @@ export const NAV = [
   ['pos', 'pos', 'Punto de venta', false],
   ['sep', 'Inventario'],
   ['products', 'products', 'Productos', true],
+  ['categories', 'categories', 'Categorías', true],
   ['inventory', 'inventory', 'Inventario y pedidos', false],
   ['movements', 'movements', 'Movimientos stock', true],
   ['suppliers', 'suppliers', 'Proveedores', true],
   ['labels', 'labels', 'Etiquetas', true],
   ['sep', 'Dinero'],
-  ['cash', 'cash', 'Caja chica y gastos', true],
-  ['close', 'close', 'Cierre de caja', true],
+  ['cash', 'cash', 'Caja chica y gastos', false],
+  ['close', 'close', 'Cierre de caja', false],
   ['sales', 'sales', 'Comprobantes', false],
   ['reports', 'reports', 'Reportes', true],
   ['sep', 'Sistema', true],
@@ -72,6 +81,7 @@ export const TITLES = {
   dashboard: 'Inicio',
   pos: 'Punto de venta',
   products: 'Productos',
+  categories: 'Categorías',
   inventory: 'Inventario y pedidos',
   movements: 'Movimientos de inventario',
   suppliers: 'Proveedores',

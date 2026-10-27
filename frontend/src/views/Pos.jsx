@@ -2,11 +2,12 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { api } from '../utils/api';
-import { money, METHODS } from '../utils/format';
+import { money, METHODS, FINANCE_METHODS, FINANCE_RATE } from '../utils/format';
 import { Sparkles, ShoppingCart, ShoppingBag } from '../utils/icons';
 import Modal from '../components/Modal';
 
-const REASONS = ['Producto dañado', 'Cliente frecuente', 'Promoción', 'Regateo', 'Otro'];
+const REASONS = ['Cliente lista 5%', 'Promoción', 'Ajuste', 'Otro']; // fallback if not below
+const REASONS_UNUSED = ['Producto dañado', 'Cliente frecuente', 'Promoción', 'Regateo', 'Otro'];
 
 export default function Pos() {
   const { cash, categories, settings, toast, fail, isAdmin } = useApp();
@@ -58,8 +59,10 @@ export default function Pos() {
   const lines = [...cart.values()];
   const sub = lines.reduce((a, l) => a + l.qty * l.p.price, 0);
   const disc = Math.min(Number(payData.discount) || 0, sub);
-  const tax = Math.round((sub - disc) * rate / 100);
-  const total = sub - disc + tax;
+  const net = sub - disc;
+  const tax = Math.round(net * rate / 100);
+  const finance = FINANCE_METHODS.includes(payData.method) ? Math.round(net * FINANCE_RATE) : 0;
+  const total = net + tax + finance;
 
   const onScanKey = e => {
     if (e.key !== 'Enter') return;
@@ -82,20 +85,31 @@ export default function Pos() {
   const doPay = async () => {
     if (!cash) return toast('La caja está cerrada', 'err');
     if (!lines.length) return;
-    if (payData.discount > 0 && !payData.reason) return toast('Indica el motivo del descuento', 'err');
+    const discountCheck = Math.max(0, Number(payData.discount) || 0);
+    if (discountCheck > 0 && !(payData.reason || '').trim()) {
+      return toast('Si hay descuento, indica el motivo', 'err');
+    }
     try {
+      const discountVal = Math.max(0, Math.min(Number(payData.discount) || 0, sub));
       const body = {
         items: lines.map(l => ({ product_id: l.p.id, qty: l.qty })),
         method: payData.method,
-        discount: disc,
-        discount_reason: payData.reason || null,
-        received: payData.method === 'efectivo' ? (Number(payData.received) || total) : null,
-        customer_name: payData.customer_name || null,
-        customer_phone: payData.customer_phone || null,
+        discount: discountVal,
+        discount_reason: discountVal > 0 ? (payData.reason || '') : '',
+        // Nunca enviar null: el backend exige número (0 si no es efectivo)
+        received: payData.method === 'efectivo'
+          ? (Number(payData.received) > 0 ? Number(payData.received) : total)
+          : total,
+        customer_name: (payData.customer_name || '').trim(),
+        customer_phone: (payData.customer_phone || '').trim(),
       };
       const sale = await api('/sales', { method: 'POST', body });
       const phone = payData.customer_phone;
-      toast('Venta registrada 💖');
+      toast(`Venta #${sale.number} registrada · stock descontado 💖`);
+      if (sale.low_stock?.length) {
+        const names = sale.low_stock.map(x => `${x.name} (quedan ${x.stock})`).join(', ');
+        setTimeout(() => toast(`Avisar surtido al admin: ${names}`, 'err'), 600);
+      }
       setCart(new Map());
       setShowPay(false);
       setPayData({ method: 'efectivo', received: '', discount: 0, reason: '', customer_name: '', customer_phone: '' });
@@ -116,9 +130,13 @@ export default function Pos() {
             `*Comprobante Nº ${String(sale.number).padStart(5, '0')}*`,
             itemsTxt,
             '',
+            sale.discount ? `Descuento: -${money(sale.discount)}${sale.discount_reason ? ` (${sale.discount_reason})` : ''}` : null,
+            sale.finance_fee ? `Recargo ${METHODS[sale.method]?.[1] || sale.method} 8%: +${money(sale.finance_fee)}` : null,
             `*TOTAL: ${money(sale.total)}*`,
+            `Pago: ${METHODS[sale.method]?.[1] || sale.method}`,
+            '',
             '_Documento interno · Gracias por tu compra 💖_',
-          ].join('\n');
+          ].filter(Boolean).join('\n');
           window.open(`https://wa.me/${p}?text=${encodeURIComponent(msg)}`, '_blank');
           try {
             await api(`/sales/${sale.id}/whatsapp-sent`, { method: 'POST', body: { phone } });
@@ -246,6 +264,13 @@ export default function Pos() {
               ))}
             </div>
           </div>
+          {FINANCE_METHODS.includes(payData.method) && (
+            <p className="muted" style={{ fontSize: 13 }}>
+              <b>Recargo 8%</b> por {METHODS[payData.method]?.[1] || payData.method}: {money(finance)}
+              {disc > 0 ? ' (sobre el valor ya con descuento de lista).' : '.'}
+              {' '}Total a cobrar: <b>{money(total)}</b>
+            </p>
+          )}
           {payData.method === 'efectivo' && (
             <div className="field">
               <label>Recibido</label>

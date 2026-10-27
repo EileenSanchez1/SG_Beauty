@@ -6,6 +6,7 @@ import Toast from './components/Toast';
 import Dashboard from './views/Dashboard';
 import Pos from './views/Pos';
 import Products from './views/Products';
+import Categories from './views/Categories';
 import Inventory from './views/Inventory';
 import Labels from './views/Labels';
 import Cash from './views/Cash';
@@ -26,6 +27,7 @@ function PrivateRoutes() {
         <Route path="/dashboard" element={isAdmin() ? <Dashboard /> : <Navigate to="/pos" replace />} />
         <Route path="/pos" element={<Pos />} />
         <Route path="/products" element={<Products />} />
+        <Route path="/categories" element={<Categories />} />
         <Route path="/inventory" element={<Inventory />} />
         <Route path="/movements" element={<Movements />} />
         <Route path="/suppliers" element={<Suppliers />} />

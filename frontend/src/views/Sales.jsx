@@ -16,7 +16,8 @@ function buildWhatsAppText(sale, businessName = 'Distribuidora de Belleza') {
     lines.push(`• ${i.name} x${i.qty} = ${money(i.line_total ?? i.qty * i.unit_price)}`);
   });
   lines.push('');
-  if (sale.discount) lines.push(`Descuento: -${money(sale.discount)}`);
+  if (sale.discount) lines.push(`Descuento: -${money(sale.discount)}${sale.discount_reason ? ` (${sale.discount_reason})` : ''}`);
+  if (sale.finance_fee) lines.push(`Recargo ${METHODS[sale.method]?.[1] || sale.method} 8%: +${money(sale.finance_fee)}`);
   lines.push(`*TOTAL: ${money(sale.total)}*`);
   lines.push(`Pago: ${METHODS[sale.method]?.[1] || sale.method}`);
   lines.push('');
@@ -35,15 +36,40 @@ function openWhatsApp(phone, text) {
 export default function Sales() {
   const { fail, toast, isAdmin, settings } = useApp();
   const [sales, setSales] = useState([]);
+  const [summary, setSummary] = useState(null);
   const [detail, setDetail] = useState(null);
-  const [filter, setFilter] = useState('all'); // all | sent | not_sent
+  const [waFilter, setWaFilter] = useState('all');
+  const [day, setDay] = useState(today());
+  const [dayTo, setDayTo] = useState(today());
+  const [method, setMethod] = useState('');
 
-  const load = () => api('/sales').then(setSales).catch(fail);
-  useEffect(() => { load(); }, []);
+  const load = () => {
+    const q = new URLSearchParams();
+    if (isAdmin()) {
+      q.set('date_from', day);
+      q.set('date_to', dayTo || day);
+    }
+    if (method) q.set('method', method);
+    const qs = q.toString() ? `?${q}` : '';
+    api('/sales' + qs)
+      .then(data => {
+        // compat: array antiguo o { sales, summary }
+        if (Array.isArray(data)) {
+          setSales(data);
+          setSummary(null);
+        } else {
+          setSales(data.sales || []);
+          setSummary(data.summary || null);
+        }
+      })
+      .catch(fail);
+  };
+
+  useEffect(() => { load(); }, [day, dayTo, method]);
 
   const visible = sales.filter(s => {
-    if (filter === 'sent') return !!s.whatsapp_sent_at;
-    if (filter === 'not_sent') return !s.whatsapp_sent_at && s.status === 'ok';
+    if (waFilter === 'sent') return !!s.whatsapp_sent_at;
+    if (waFilter === 'not_sent') return !s.whatsapp_sent_at && s.status === 'ok';
     return true;
   });
 
@@ -85,20 +111,17 @@ export default function Sales() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `comprobante_${String(s.number).padStart(5, '0')}.pdf`;
+      a.download = `comprobante-${s.number}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
-      toast('Comprobante PDF descargado');
     } catch (e) { fail(e); }
   };
 
   const sendWhatsApp = async (s) => {
-    const biz = settings?.business_name || 'Distribuidora de Belleza';
-    const text = buildWhatsAppText(s, biz);
-    let phone = s.customer_phone;
-    if (!phone) phone = prompt('Número de WhatsApp del cliente (ej. 3001234567):') || '';
+    const phone = s.customer_phone || prompt('Celular del cliente (WhatsApp)');
     if (!phone) return;
-    openWhatsApp(phone, text);
+    const text = buildWhatsAppText(s, settings?.business_name || 'SG Beauty');
+    if (!openWhatsApp(phone, text)) return toast('Celular inválido', 'err');
     try {
       const updated = await api(`/sales/${s.id}/whatsapp-sent`, { method: 'POST', body: { phone } });
       toast('Marcado como enviado por WhatsApp');
@@ -107,61 +130,96 @@ export default function Sales() {
     } catch (e) { fail(e); }
   };
 
-  const statusBadge = (st) => {
-    if (st === 'anulada') return <span className="badge red">Anulada</span>;
-    if (st === 'devuelta') return <span className="badge">Devuelta</span>;
-    return <span className="badge ok">OK</span>;
-  };
-
   return (
     <>
-      <div className="spread mb">
-        <div className="gap">
-          <button className={`chip ${filter === 'all' ? 'on' : ''}`} onClick={() => setFilter('all')}>Todos</button>
-          <button className={`chip ${filter === 'sent' ? 'on' : ''}`} onClick={() => setFilter('sent')}>Enviados WA</button>
-          <button className={`chip ${filter === 'not_sent' ? 'on' : ''}`} onClick={() => setFilter('not_sent')}>Sin enviar</button>
+      <div className="card mb">
+        <h3 style={{ marginTop: 0 }}>Ventas (como el cuaderno del día)</h3>
+        <p className="muted" style={{ fontSize: 13 }}>
+          Cada venta en el POS descuenta stock sola. Aquí ves el registro por día y forma de pago.
+          {isAdmin() ? ' Como admin puedes consultar cualquier fecha.' : ' Como vendedora ves tus ventas de hoy.'}
+        </p>
+        <div className="gap" style={{ flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          {isAdmin() && (
+            <>
+              <div className="field" style={{ margin: 0 }}>
+                <label>Desde</label>
+                <input className="input" type="date" value={day} onChange={e => setDay(e.target.value)} />
+              </div>
+              <div className="field" style={{ margin: 0 }}>
+                <label>Hasta</label>
+                <input className="input" type="date" value={dayTo} onChange={e => setDayTo(e.target.value)} />
+              </div>
+            </>
+          )}
+          <div className="field" style={{ margin: 0, minWidth: 160 }}>
+            <label>Método de pago</label>
+            <select className="input" value={method} onChange={e => setMethod(e.target.value)}>
+              <option value="">Todos</option>
+              {Object.entries(METHODS).map(([k, [, name]]) => (
+                <option key={k} value={k}>{name}</option>
+              ))}
+            </select>
+          </div>
+          <button type="button" className={`chip ${waFilter === 'all' ? 'on' : ''}`} onClick={() => setWaFilter('all')}>Todos</button>
+          <button type="button" className={`chip ${waFilter === 'sent' ? 'on' : ''}`} onClick={() => setWaFilter('sent')}>Enviados WA</button>
+          <button type="button" className={`chip ${waFilter === 'not_sent' ? 'on' : ''}`} onClick={() => setWaFilter('not_sent')}>Sin enviar</button>
         </div>
-        <p className="muted" style={{ fontSize: 12 }}>Usa el WhatsApp Business del local en este equipo para control centralizado.</p>
+
+        {summary && (
+          <div className="grid g4" style={{ marginTop: 14 }}>
+            <div className="stat">
+              <div className="lbl">Ventas OK</div>
+              <div className="val">{summary.count}</div>
+            </div>
+            <div className="stat">
+              <div className="lbl">Total del periodo</div>
+              <div className="val">{money(summary.total)}</div>
+            </div>
+            {Object.entries(summary.by_method || {}).filter(([, v]) => v > 0).map(([k, v]) => (
+              <div className="stat" key={k}>
+                <div className="lbl">{METHODS[k]?.[1] || k}</div>
+                <div className="val" style={{ fontSize: 20 }}>{money(v)}</div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
+
       <div className="card">
         <table className="table">
           <thead>
             <tr>
               <th>Nº</th>
               <th>Fecha</th>
-              <th>Vendedor</th>
-              <th>Método</th>
+              {isAdmin() && <th>Vendedora</th>}
+              <th>Pago</th>
               <th>Total</th>
               <th>Estado</th>
-              <th>WhatsApp</th>
+              <th>WA</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
             {visible.map(s => (
-              <tr key={s.id} className={s.status !== 'ok' ? 'muted' : ''}>
-                <td><b>{String(s.number).padStart(5, '0')}</b></td>
+              <tr key={s.id}>
+                <td><code>{String(s.number).padStart(5, '0')}</code></td>
                 <td>{fdt(s.created_at)}</td>
-                <td>{s.seller}</td>
+                {isAdmin() && <td>{s.user || '—'}</td>}
                 <td>{METHODS[s.method]?.[1] || s.method}</td>
-                <td>{money(s.total)}</td>
-                <td>{statusBadge(s.status)}</td>
+                <td><b>{money(s.total)}</b></td>
                 <td>
-                  {s.whatsapp_sent_at
-                    ? <span className="badge ok" title={fdt(s.whatsapp_sent_at)}>Enviado</span>
-                    : <span className="muted">—</span>}
+                  {s.status === 'ok' && <span className="badge ok">OK</span>}
+                  {s.status === 'anulada' && <span className="badge red">Anulada</span>}
+                  {s.status === 'devuelta' && <span className="badge">Devuelta</span>}
                 </td>
+                <td>{s.whatsapp_sent_at ? <span className="badge ok">Enviado</span> : <span className="badge">—</span>}</td>
                 <td>
-                  <div className="gap" style={{ flexWrap: 'wrap' }}>
-                    <button className="btn sm" title="Ver" onClick={() => openDetail(s)}><Eye size={14} /></button>
-                    <button className="btn sm" title="PDF" onClick={() => downloadReceiptPdf(s)}><FileDown size={14} /></button>
-                    {s.status === 'ok' && (
-                      <button className="btn sm" title="WhatsApp" onClick={() => sendWhatsApp(s)}><MessageCircle size={14} /></button>
-                    )}
+                  <div className="gap">
+                    <button className="btn sm" onClick={() => openDetail(s)}><Eye size={14} /></button>
                     {s.status === 'ok' && isAdmin() && (
                       <>
-                        <button className="btn sm" onClick={() => returnSale(s)}>Devolver</button>
-                        <button className="btn sm danger" onClick={() => voidSale(s)}>Anular</button>
+                        <button className="btn sm ghost" onClick={() => voidSale(s)}>Anular</button>
+                        <button className="btn sm ghost" onClick={() => returnSale(s)}>Devolver</button>
                       </>
                     )}
                   </div>
@@ -173,18 +231,18 @@ export default function Sales() {
         {!visible.length && (
           <div className="empty">
             <div className="big"><FileText size={42} strokeWidth={1.5} style={{ color: 'var(--plum-soft)' }} /></div>
-            <p>Sin comprobantes</p>
+            <p>No hay ventas en este filtro</p>
           </div>
         )}
       </div>
 
       {detail && (
         <Modal title={`Comprobante Nº ${String(detail.number).padStart(5, '0')}`} onClose={() => setDetail(null)} wide>
-          <p className="muted">{fdt(detail.created_at)} · {detail.seller || '—'}</p>
-          {detail.customer_name && <p>Cliente: <b>{detail.customer_name}</b>{detail.customer_phone ? ` · ${detail.customer_phone}` : ''}</p>}
-          {detail.whatsapp_sent_at && <p className="ok">WhatsApp enviado: {fdt(detail.whatsapp_sent_at)} → {detail.whatsapp_phone}</p>}
+          <p className="muted">{fdt(detail.created_at)} · {METHODS[detail.method]?.[1] || detail.method}</p>
           <table className="table">
-            <thead><tr><th>Producto</th><th>Cant</th><th>P. unit</th><th>Total</th></tr></thead>
+            <thead>
+              <tr><th>Producto</th><th>Cant.</th><th>Precio</th><th>Subtotal</th></tr>
+            </thead>
             <tbody>
               {(detail.items || []).map((i, idx) => (
                 <tr key={idx}>
@@ -199,7 +257,7 @@ export default function Sales() {
           <div className="spread mt">
             <div>
               {detail.discount > 0 && <p>Descuento: -{money(detail.discount)}</p>}
-              <p><b>Total: {money(detail.total)}</b> · {METHODS[detail.method]?.[1] || detail.method}</p>
+              <p><b>Total: {money(detail.total)}</b></p>
             </div>
             <div className="gap">
               <button className="btn" onClick={() => downloadReceiptPdf(detail)}><FileDown size={14} style={{ marginRight: 4 }} /> PDF</button>

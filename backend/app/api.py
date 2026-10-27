@@ -17,8 +17,10 @@ from .models import *
 from .security import current_user, admin_only, hash_password, verify_password, make_token
 
 router = APIRouter(prefix="/api")
-METHODS = ["efectivo", "nequi", "daviplata", "tarjeta"]
-MOVE_KINDS = ["cadena", "ahorro", "aseo", "gasto", "otro"]
+METHODS = ["efectivo", "nequi", "daviplata", "tarjeta", "qr", "addi", "sistecredito"]
+FINANCE_METHODS = {"addi", "sistecredito"}
+FINANCE_RATE = 0.08
+MOVE_KINDS = ["cadena", "ahorro", "aseo", "gasto", "propina", "proveedor", "otro"]
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static", "uploads")
 
 DEFAULT_SETTINGS = {
@@ -86,9 +88,11 @@ def sale_out(s: Sale, admin: bool):
         if admin:
             it["unit_cost"] = i.unit_cost
         items.append(it)
+    net = (s.subtotal or 0) - (s.discount or 0)
+    finance_fee = round(net * FINANCE_RATE) if s.method in FINANCE_METHODS else 0
     return dict(
         id=s.id, number=s.number, method=s.method, subtotal=s.subtotal, discount=s.discount,
-        discount_reason=s.discount_reason, tax=s.tax, total=s.total, received=s.received,
+        discount_reason=s.discount_reason, tax=s.tax, finance_fee=finance_fee, total=s.total, received=s.received,
         change=max(0, s.received - s.total) if s.method == "efectivo" and s.received else 0,
         customer_name=s.customer_name, customer_phone=s.customer_phone, status=s.status,
         whatsapp_sent_at=iso(getattr(s, "whatsapp_sent_at", None)),
@@ -319,23 +323,46 @@ def product_create(d: ProductIn, db: Session = Depends(get_db), me: User = Depen
 
 
 @router.put("/products/{pid}")
-def product_update(pid: int, d: ProductIn, db: Session = Depends(get_db), _: User = Depends(admin_only)):
+def product_update(pid: int, d: ProductIn, db: Session = Depends(get_db), me: User = Depends(admin_only)):
     p = db.get(Product, pid)
     if not p:
         raise HTTPException(404, "No existe")
+    cat = db.get(Category, d.category_id)
+    if not cat:
+        raise HTTPException(400, "Categoría inválida")
     barcode = (d.barcode or "").strip() or None
     if barcode:
         other = db.scalar(select(Product).where(Product.barcode == barcode, Product.id != pid))
         if other:
             raise HTTPException(400, "Ese código de barras ya está en otro producto")
-    p.name, p.barcode, p.supplier = d.name.strip(), barcode, d.supplier.strip()
+    old_cat = p.category_id
+    p.name = d.name.strip()
+    p.barcode = barcode
+    if d.supplier_id:
+        srow = db.get(Supplier, d.supplier_id)
+        if not srow:
+            raise HTTPException(400, "Proveedor inválido")
+        p.supplier_id = srow.id
+        p.supplier = srow.name
+    else:
+        p.supplier_id = None
+        p.supplier = (d.supplier or "").strip()
     p.origin = "fabrica" if d.origin == "fabrica" else "propio"
     p.cost, p.price, p.min_stock, p.active = d.cost, d.price, d.min_stock, d.active
+    if d.category_id != old_cat:
+        new_sku = f"{cat.code}-{cat.next_seq:03d}"
+        while db.scalar(select(Product).where(Product.sku == new_sku)):
+            cat.next_seq += 1
+            new_sku = f"{cat.code}-{cat.next_seq:03d}"
+        p.sku = new_sku
+        cat.next_seq += 1
+    p.category_id = cat.id
     if d.image is not None:
         p.image = d.image or None
-    # El stock se cambia con "Entrada de mercancía" o "Ajuste", para dejar historial
+    log_audit(db, me, "product_update", "product", p.id, p.sku)
     db.commit()
-    return product_out(db.get(Product, pid), True)
+    p = db.scalars(select(Product).options(joinedload(Product.category), joinedload(Product.supplier_rel)).where(Product.id == pid)).unique().first()
+    return product_out(p, True)
 
 
 @router.get("/products/code/{code}")
@@ -458,7 +485,7 @@ def cash_current(db: Session = Depends(get_db), _: User = Depends(current_user))
 
 
 @router.post("/cash/open")
-def cash_open(d: OpenIn, db: Session = Depends(get_db), me: User = Depends(admin_only)):
+def cash_open(d: OpenIn, db: Session = Depends(get_db), me: User = Depends(current_user)):
     if open_session(db):
         raise HTTPException(400, "Ya hay una caja abierta")
     cs = CashSession(base=d.base, opened_by=me.id)
@@ -467,7 +494,7 @@ def cash_open(d: OpenIn, db: Session = Depends(get_db), me: User = Depends(admin
 
 
 @router.post("/cash/movements")
-def cash_move(d: MoveIn, db: Session = Depends(get_db), me: User = Depends(admin_only)):
+def cash_move(d: MoveIn, db: Session = Depends(get_db), me: User = Depends(current_user)):
     cs = open_session(db)
     if not cs:
         raise HTTPException(400, "Primero abre la caja")
@@ -491,7 +518,7 @@ def cash_move_delete(mid: int, db: Session = Depends(get_db), _: User = Depends(
 
 
 @router.post("/cash/close")
-def cash_close(d: CloseIn, db: Session = Depends(get_db), _: User = Depends(admin_only)):
+def cash_close(d: CloseIn, db: Session = Depends(get_db), me: User = Depends(current_user)):
     cs = open_session(db)
     if not cs:
         raise HTTPException(400, "No hay caja abierta")
@@ -503,7 +530,7 @@ def cash_close(d: CloseIn, db: Session = Depends(get_db), _: User = Depends(admi
 
 
 @router.get("/cash/sessions")
-def cash_sessions(limit: int = 30, db: Session = Depends(get_db), _: User = Depends(admin_only)):
+def cash_sessions(limit: int = 30, db: Session = Depends(get_db), _: User = Depends(current_user)):
     rows = db.scalars(select(CashSession).order_by(CashSession.id.desc()).limit(limit)).all()
     out = []
     for cs in rows:
@@ -514,7 +541,7 @@ def cash_sessions(limit: int = 30, db: Session = Depends(get_db), _: User = Depe
 
 
 @router.get("/cash/sessions/{sid}")
-def cash_session(sid: int, db: Session = Depends(get_db), _: User = Depends(admin_only)):
+def cash_session(sid: int, db: Session = Depends(get_db), _: User = Depends(current_user)):
     cs = db.get(CashSession, sid)
     if not cs:
         raise HTTPException(404, "No existe")
@@ -532,7 +559,7 @@ class SaleIn(BaseModel):
     method: str
     discount: int = Field(0, ge=0)
     discount_reason: str = ""
-    received: int = Field(0, ge=0)
+    received: int | None = Field(0, ge=0)
     customer_name: str = ""
     customer_phone: str = ""
 
@@ -564,28 +591,42 @@ def sale_create(d: SaleIn, db: Session = Depends(get_db), me: User = Depends(cur
         raise HTTPException(400, "El descuento no puede ser mayor que la venta")
     if d.discount > 0 and not d.discount_reason.strip():
         raise HTTPException(400, "Escribe el motivo del descuento")
+    net = subtotal - d.discount
     rate = float(settings.get("tax_rate") or 0)
-    tax = round((subtotal - d.discount) * rate / 100)
-    total = subtotal - d.discount + tax
+    vat = round(net * rate / 100)
+    finance = round(net * FINANCE_RATE) if d.method in FINANCE_METHODS else 0
+    tax = vat + finance
+    total = net + tax
     if d.method == "efectivo" and d.received and d.received < total:
         raise HTTPException(400, "El dinero recibido es menor al total")
     last = db.scalar(select(func.max(Sale.number))) or 0
     sale = Sale(number=last + 1, session_id=cs.id, user_id=me.id, method=d.method, subtotal=subtotal,
                 discount=d.discount, discount_reason=d.discount_reason.strip(), tax=tax, total=total,
-                received=d.received if d.method == "efectivo" else total,
+                received=(d.received if d.received is not None else total) if d.method == "efectivo" else total,
                 customer_name=d.customer_name.strip(), customer_phone=d.customer_phone.strip(), items=sale_items)
     db.add(sale); db.flush()
+    low_after = []
     for p, qty in products_used:
         log_stock(db, p, -qty, "venta", me, ref_type="sale", ref_id=sale.id, note=f"Venta #{sale.number}")
+        if p.stock <= p.min_stock:
+            low_after.append(dict(id=p.id, sku=p.sku, name=p.name, stock=p.stock, min_stock=p.min_stock))
     db.commit()
     db.refresh(sale)
-    return sale_out(sale, me.role == "admin")
+    out = sale_out(sale, me.role == "admin")
+    out["low_stock"] = low_after
+    return out
 
 
 @router.get("/sales")
-def sales_list(date_from: str | None = None, date_to: str | None = None, db: Session = Depends(get_db), me: User = Depends(current_user)):
+def sales_list(
+    date_from: str | None = None,
+    date_to: str | None = None,
+    method: str | None = None,
+    db: Session = Depends(get_db),
+    me: User = Depends(current_user),
+):
     today = now().date()
-    if me.role != "admin":  # vendedor: solo sus ventas de hoy
+    if me.role != "admin":
         d1 = d2 = today
     else:
         d1 = parse_day(date_from, today)
@@ -596,7 +637,22 @@ def sales_list(date_from: str | None = None, date_to: str | None = None, db: Ses
             .order_by(Sale.id.desc()))
     if me.role != "admin":
         stmt = stmt.where(Sale.user_id == me.id)
-    return [sale_out(s, me.role == "admin") for s in db.scalars(stmt).unique()]
+    if method and method in METHODS:
+        stmt = stmt.where(Sale.method == method)
+    rows = db.scalars(stmt).unique().all()
+    out = [sale_out(s, me.role == "admin") for s in rows]
+    by_method = {m: 0 for m in METHODS}
+    n_ok = total_ok = 0
+    for s in rows:
+        if s.status != "ok":
+            continue
+        n_ok += 1
+        total_ok += s.total
+        by_method[s.method] = by_method.get(s.method, 0) + s.total
+    return dict(
+        sales=out,
+        summary=dict(date_from=d1.isoformat(), date_to=d2.isoformat(), count=n_ok, total=total_ok, by_method=by_method),
+    )
 
 
 @router.get("/sales/{sid}")
